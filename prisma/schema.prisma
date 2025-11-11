@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApiModel {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  schema        String   // JSON string
+  generatedByAI Boolean  @default(false)
+  aiPrompt      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
