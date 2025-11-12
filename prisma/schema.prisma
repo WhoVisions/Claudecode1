@@ -19,15 +19,16 @@ model Setting {
 }
 
 model ApiModel {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  schema        String   // JSON string
-  generatedByAI Boolean  @default(false)
+  id            String    @id @default(cuid())
+  name          String    @unique
+  schema        String    // JSON string
+  generatedByAI Boolean   @default(false)
   aiPrompt      String?
-  requiresAuth  Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  requiresAuth  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   apiKeys       ApiKey[]
+  records       ApiData[]
 }
 
 model ApiKey {
@@ -40,4 +41,15 @@ model ApiKey {
   lastUsedAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ApiData {
+  id        String   @id @default(cuid())
+  modelId   String
+  model     ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  data      String   // JSON string storing the actual record data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modelId])
 }

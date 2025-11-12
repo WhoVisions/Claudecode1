@@ -86,14 +86,61 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
     }
 
-    // For now, return a placeholder response
-    // In a full implementation, you would store data in a separate table
+    // Fetch records from database
+    if (id) {
+      // Get specific record
+      const record = await prisma.apiData.findFirst({
+        where: {
+          id,
+          modelId: apiModel.id
+        }
+      })
+
+      if (!record) {
+        return NextResponse.json(
+          { error: 'Record not found', message: `No record found with id "${id}"` },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({
+        id: record.id,
+        ...JSON.parse(record.data),
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt
+      })
+    }
+
+    // Get all records with pagination
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = (page - 1) * limit
+
+    const [records, total] = await Promise.all([
+      prisma.apiData.findMany({
+        where: { modelId: apiModel.id },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.apiData.count({
+        where: { modelId: apiModel.id }
+      })
+    ])
+
     return NextResponse.json({
-      message: 'API endpoint is active',
-      modelName,
-      schema: JSON.parse(apiModel.schema),
-      requiresAuth: apiModel.requiresAuth,
-      note: 'To store actual data, you would need to implement a data storage layer'
+      data: records.map(record => ({
+        id: record.id,
+        ...JSON.parse(record.data),
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
     })
   } catch (error: any) {
     console.error('GET Error:', error)
@@ -166,13 +213,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Return success (in full implementation, you would save to database)
+    // Store data in database
+    const record = await prisma.apiData.create({
+      data: {
+        modelId: apiModel.id,
+        data: JSON.stringify(body)
+      }
+    })
+
     return NextResponse.json({
       message: 'Record created successfully',
       data: {
-        id: crypto.randomUUID(),
+        id: record.id,
         ...body,
-        createdAt: new Date().toISOString()
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt
       }
     }, { status: 201 })
   } catch (error: any) {
@@ -224,13 +279,40 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       }
     }
 
-    // Return success (in full implementation, you would update in database)
+    // Check if record exists
+    const existingRecord = await prisma.apiData.findFirst({
+      where: {
+        id,
+        modelId: apiModel.id
+      }
+    })
+
+    if (!existingRecord) {
+      return NextResponse.json(
+        { error: 'Record not found', message: `No record found with id "${id}"` },
+        { status: 404 }
+      )
+    }
+
+    // Merge existing data with updates
+    const existingData = JSON.parse(existingRecord.data)
+    const updatedData = { ...existingData, ...body }
+
+    // Update record in database
+    const record = await prisma.apiData.update({
+      where: { id },
+      data: {
+        data: JSON.stringify(updatedData)
+      }
+    })
+
     return NextResponse.json({
       message: 'Record updated successfully',
       data: {
-        id,
-        ...body,
-        updatedAt: new Date().toISOString()
+        id: record.id,
+        ...updatedData,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt
       }
     })
   } catch (error: any) {
@@ -281,7 +363,26 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       }
     }
 
-    // Return success (in full implementation, you would delete from database)
+    // Check if record exists
+    const existingRecord = await prisma.apiData.findFirst({
+      where: {
+        id,
+        modelId: apiModel.id
+      }
+    })
+
+    if (!existingRecord) {
+      return NextResponse.json(
+        { error: 'Record not found', message: `No record found with id "${id}"` },
+        { status: 404 }
+      )
+    }
+
+    // Delete record from database
+    await prisma.apiData.delete({
+      where: { id }
+    })
+
     return NextResponse.json({
       message: 'Record deleted successfully',
       id

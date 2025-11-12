@@ -6,6 +6,8 @@ Build custom REST APIs in seconds using natural language! This project combines 
 
 - **🤖 AI-Powered Schema Generation**: Describe your API in plain English, and Gemini AI generates optimized JSON schemas
 - **⚡ Instant APIs**: Full CRUD operations (Create, Read, Update, Delete) for every API you create
+- **💾 Persistent Data Storage**: Real database storage for all your API data with automatic CRUD operations
+- **📄 Pagination Support**: Built-in pagination for large datasets
 - **🔐 API Key Authentication**: Protect your APIs with secure API key authentication
 - **🔑 Key Management**: Create, enable/disable, and delete API keys with usage tracking
 - **🎨 Beautiful Dashboard**: Modern, responsive UI built with Tailwind CSS v4
@@ -139,20 +141,55 @@ curl -X POST http://localhost:3000/api/my-products \
     "in-stock": true
   }'
 
-# Get all products
-curl http://localhost:3000/api/my-products
+# Response:
+{
+  "message": "Record created successfully",
+  "data": {
+    "id": "clx123abc...",
+    "name": "Laptop",
+    "price": 999.99,
+    "in-stock": true,
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "updatedAt": "2025-01-15T10:30:00.000Z"
+  }
+}
+
+# Get all products (with pagination)
+curl "http://localhost:3000/api/my-products?page=1&limit=10"
+
+# Response:
+{
+  "data": [
+    {
+      "id": "clx123abc...",
+      "name": "Laptop",
+      "price": 999.99,
+      "in-stock": true,
+      "createdAt": "2025-01-15T10:30:00.000Z",
+      "updatedAt": "2025-01-15T10:30:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+
+# Get a specific product
+curl http://localhost:3000/api/my-products?id=clx123abc...
 
 # Update a product
-curl -X PUT http://localhost:3000/api/my-products?id=abc123 \
+curl -X PUT "http://localhost:3000/api/my-products?id=clx123abc..." \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Gaming Laptop",
-    "price": 1299.99,
-    "in-stock": true
+    "price": 1299.99
   }'
 
 # Delete a product
-curl -X DELETE http://localhost:3000/api/my-products?id=abc123
+curl -X DELETE "http://localhost:3000/api/my-products?id=clx123abc..."
 ```
 
 #### Example API Usage (Protected API)
@@ -239,15 +276,16 @@ model Setting {
 Stores created API definitions
 ```prisma
 model ApiModel {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  schema        String   // JSON string
-  generatedByAI Boolean  @default(false)
+  id            String    @id @default(cuid())
+  name          String    @unique
+  schema        String    // JSON string
+  generatedByAI Boolean   @default(false)
   aiPrompt      String?
-  requiresAuth  Boolean  @default(false)
+  requiresAuth  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   apiKeys       ApiKey[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  records       ApiData[]
 }
 ```
 
@@ -264,6 +302,21 @@ model ApiKey {
   lastUsedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+```
+
+### ApiData
+Stores actual data records for each API
+```prisma
+model ApiData {
+  id        String   @id @default(cuid())
+  modelId   String
+  model     ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  data      String   // JSON string storing the actual record data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modelId])
 }
 ```
 
@@ -387,8 +440,10 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🔮 Future Enhancements
 
-- [ ] Persistent data storage for created APIs
+- [x] Persistent data storage for created APIs (✅ Implemented!)
 - [x] API key authentication (✅ Implemented!)
+- [x] Pagination support (✅ Implemented!)
+- [ ] Advanced filtering and search
 - [ ] Rate limiting and usage quotas
 - [ ] Export API documentation (Swagger/OpenAPI)
 - [ ] Team collaboration features
@@ -396,6 +451,7 @@ This project is open source and available under the [MIT License](LICENSE).
 - [ ] Webhooks support
 - [ ] Custom validation rules
 - [ ] API analytics and monitoring
+- [ ] GraphQL support
 
 ## 📧 Support
 
