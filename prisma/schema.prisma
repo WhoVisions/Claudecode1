@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApiModel {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  schema        String    // JSON string
+  generatedByAI Boolean   @default(false)
+  aiPrompt      String?
+  requiresAuth  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  apiKeys       ApiKey[]
+  records       ApiData[]
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  modelId     String
+  model       ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ApiData {
+  id        String   @id @default(cuid())
+  modelId   String
+  model     ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  data      String   // JSON string storing the actual record data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modelId])
+}

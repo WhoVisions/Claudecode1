@@ -1,0 +1,91 @@
+# Cloud Build configuration for CI/CD pipeline
+# Builds and deploys Guardian and Orchestrator agents to Cloud Run
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/api-builder-agent:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/api-builder-agent:latest'
+      - '.'
+
+  # Step 2: Push image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/api-builder-agent'
+
+  # Step 3: Deploy Guardian Agent
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-guardian'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'guardian-agent'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/api-builder-agent:$SHORT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--max-instances'
+      - '10'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--timeout'
+      - '60s'
+      - '--set-env-vars'
+      - 'NODE_ENV=production,AGENT_ROLE=guardian'
+
+  # Step 4: Deploy Orchestrator Agent
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-orchestrator'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'orchestrator-agent'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/api-builder-agent:$SHORT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--no-allow-unauthenticated'
+      - '--max-instances'
+      - '20'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '300s'
+      - '--set-env-vars'
+      - 'NODE_ENV=production,AGENT_ROLE=orchestrator'
+
+# Substitutions (can be overridden)
+substitutions:
+  _REGION: us-central1
+
+# Options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'N1_HIGHCPU_8'
+
+# Timeout for entire build
+timeout: 1200s
+
+# Images to push
+images:
+  - 'gcr.io/$PROJECT_ID/api-builder-agent:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/api-builder-agent:latest'
