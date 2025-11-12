@@ -258,6 +258,78 @@ Return only the modified JSON schema.`;
       return { valid: false, error: error.message || 'Invalid API key' };
     }
   }
+
+  /**
+   * Generate OpenAPI 3.0 specification for an API
+   */
+  async generateOpenApiSpec(
+    modelName: string,
+    schema: Record<string, string>,
+    requiresAuth: boolean
+  ): Promise<any> {
+    if (!this.client) {
+      throw new Error('Gemini API key not configured');
+    }
+
+    try {
+      const model = this.client.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+      const prompt = `Generate a complete OpenAPI 3.0 JSON specification for a REST API.
+The API resource is named "${modelName}".
+The API has full CRUD operations:
+- GET /api/${modelName} (List records with pagination: page, limit)
+- POST /api/${modelName} (Create a new record)
+- GET /api/${modelName}?id={id} (Get a single record by ID)
+- PUT /api/${modelName}?id={id} (Update a record by ID)
+- DELETE /api/${modelName}?id={id} (Delete a record by ID)
+
+The JSON schema for the resource is:
+${JSON.stringify(schema, null, 2)}
+
+${requiresAuth ? 'All endpoints are protected and require an API key passed in the "X-API-Key" header.' : 'All endpoints are public.'}
+
+Please ensure the generated JSON is valid and includes:
+- A 'paths' object for all 5 operations.
+- 'requestBody' definitions for POST and PUT.
+- 'parameters' for the 'id' query param on GET, PUT, DELETE.
+- 'parameters' for 'page' and 'limit' on the GET (List) endpoint.
+- A 'components.schemas' object for the resource ("${modelName}") and its input ("${modelName}Input" - without id, createdAt, updatedAt).
+${requiresAuth ? "- A 'components.securitySchemes' object for 'ApiKeyAuth' (type: apiKey, in: header, name: X-API-Key)." : ''}
+${requiresAuth ? "- A global 'security' requirement object." : ''}
+
+Return *only* the raw JSON object, starting with { and ending with }.`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text();
+
+      // Clean up potential markdown formatting
+      let jsonText = text.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/```\n?/g, '');
+      }
+      jsonText = jsonText.trim();
+
+      return JSON.parse(jsonText);
+    } catch (error: any) {
+      console.error('Failed to generate OpenAPI spec:', error);
+      throw new Error('AI returned invalid JSON or generation failed');
+    }
+  }
+
+  /**
+   * Generate content (generic method for any prompt)
+   */
+  async generateContent(prompt: string): Promise<any> {
+    if (!this.client) {
+      throw new Error('Gemini API key not configured');
+    }
+
+    const model = this.client.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    return await model.generateContent(prompt);
+  }
 }
 
 /**

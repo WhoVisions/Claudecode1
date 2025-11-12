@@ -39,6 +39,8 @@ model ApiKey {
   model       ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
   isActive    Boolean  @default(true)
   lastUsedAt  DateTime?
+  usageCount  Int      @default(0)
+  usageLimit  Int      @default(1000)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -47,7 +49,7 @@ model ApiData {
   id        String   @id @default(cuid())
   modelId   String
   model     ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  data      String   // JSON string storing the actual record data
+  data      Json     // Native JSON type for advanced filtering (requires PostgreSQL/MySQL 5.7+)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
