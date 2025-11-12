@@ -1,0 +1,59 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Next.js
+.next
+out
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+*.log
+logs
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# CI/CD
+.github
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Development files
+.editorconfig
+.prettierrc
+.eslintrc.json
+
+# Sandbox temp files
+.sandbox
+
+# Database
+prisma/dev.db
+prisma/dev.db-journal
+
+# Build artifacts
+*.tsbuildinfo
