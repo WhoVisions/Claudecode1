@@ -4,10 +4,54 @@ import { prisma } from '@/lib/prisma'
 /**
  * Dynamic API Route Handler
  * Handles CRUD operations for user-created APIs
+ * Supports API key authentication
  */
 
 interface RouteContext {
   params: Promise<{ modelName: string }>
+}
+
+/**
+ * Validate API key for protected endpoints
+ */
+async function validateApiKey(
+  request: NextRequest,
+  modelId: string
+): Promise<{ valid: boolean; error?: string }> {
+  const apiKey = request.headers.get('X-API-Key') || request.headers.get('x-api-key')
+
+  if (!apiKey) {
+    return { valid: false, error: 'Missing API key. Include X-API-Key header.' }
+  }
+
+  try {
+    const key = await prisma.apiKey.findUnique({
+      where: { key: apiKey }
+    })
+
+    if (!key) {
+      return { valid: false, error: 'Invalid API key.' }
+    }
+
+    if (key.modelId !== modelId) {
+      return { valid: false, error: 'API key not valid for this endpoint.' }
+    }
+
+    if (!key.isActive) {
+      return { valid: false, error: 'API key has been disabled.' }
+    }
+
+    // Update last used timestamp
+    await prisma.apiKey.update({
+      where: { id: key.id },
+      data: { lastUsedAt: new Date() }
+    })
+
+    return { valid: true }
+  } catch (error) {
+    console.error('API key validation error:', error)
+    return { valid: false, error: 'Failed to validate API key.' }
+  }
 }
 
 /**
@@ -31,12 +75,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
       )
     }
 
+    // Check if authentication is required
+    if (apiModel.requiresAuth) {
+      const authResult = await validateApiKey(request, apiModel.id)
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: authResult.error },
+          { status: 401 }
+        )
+      }
+    }
+
     // For now, return a placeholder response
     // In a full implementation, you would store data in a separate table
     return NextResponse.json({
       message: 'API endpoint is active',
       modelName,
       schema: JSON.parse(apiModel.schema),
+      requiresAuth: apiModel.requiresAuth,
       note: 'To store actual data, you would need to implement a data storage layer'
     })
   } catch (error: any) {
@@ -66,6 +122,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
         { error: 'API not found', message: `No API exists with name "${modelName}"` },
         { status: 404 }
       )
+    }
+
+    // Check if authentication is required
+    if (apiModel.requiresAuth) {
+      const authResult = await validateApiKey(request, apiModel.id)
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: authResult.error },
+          { status: 401 }
+        )
+      }
     }
 
     const schema = JSON.parse(apiModel.schema)
@@ -146,6 +213,17 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       )
     }
 
+    // Check if authentication is required
+    if (apiModel.requiresAuth) {
+      const authResult = await validateApiKey(request, apiModel.id)
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: authResult.error },
+          { status: 401 }
+        )
+      }
+    }
+
     // Return success (in full implementation, you would update in database)
     return NextResponse.json({
       message: 'Record updated successfully',
@@ -190,6 +268,17 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         { error: 'API not found', message: `No API exists with name "${modelName}"` },
         { status: 404 }
       )
+    }
+
+    // Check if authentication is required
+    if (apiModel.requiresAuth) {
+      const authResult = await validateApiKey(request, apiModel.id)
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: authResult.error },
+          { status: 401 }
+        )
+      }
     }
 
     // Return success (in full implementation, you would delete from database)

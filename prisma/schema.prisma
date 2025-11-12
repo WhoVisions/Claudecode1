@@ -24,6 +24,20 @@ model ApiModel {
   schema        String   // JSON string
   generatedByAI Boolean  @default(false)
   aiPrompt      String?
+  requiresAuth  Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  apiKeys       ApiKey[]
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  modelId     String
+  model       ApiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

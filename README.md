@@ -6,6 +6,8 @@ Build custom REST APIs in seconds using natural language! This project combines 
 
 - **🤖 AI-Powered Schema Generation**: Describe your API in plain English, and Gemini AI generates optimized JSON schemas
 - **⚡ Instant APIs**: Full CRUD operations (Create, Read, Update, Delete) for every API you create
+- **🔐 API Key Authentication**: Protect your APIs with secure API key authentication
+- **🔑 Key Management**: Create, enable/disable, and delete API keys with usage tracking
 - **🎨 Beautiful Dashboard**: Modern, responsive UI built with Tailwind CSS v4
 - **🔒 Type-Safe**: Built with TypeScript and Prisma for complete type safety
 - **📝 Dual Mode Creation**: Choose between manual JSON entry or AI-powered generation
@@ -83,7 +85,8 @@ Open [http://localhost:3000](http://localhost:3000) to see the landing page.
   "in-stock": "boolean"
 }
 ```
-5. Click "Create My API!"
+5. (Optional) Check "Require API Key Authentication" to protect your API
+6. Click "Create My API!"
 
 ### Creating an API (AI Mode)
 
@@ -95,7 +98,24 @@ Open [http://localhost:3000](http://localhost:3000) to see the landing page.
 5. Click "Generate Schema with AI"
 6. Review the generated schema
 7. Click "Use This Schema"
-8. Click "Create My API!"
+8. (Optional) Check "Require API Key Authentication" to protect your API
+9. Click "Create My API!"
+
+### Managing API Keys
+
+If you enabled authentication for your API:
+
+1. In the Admin Dashboard, click "View Schema" on your API
+2. Click "Manage API Keys"
+3. Enter a name for your key (e.g., "Production", "Development")
+4. Click "Create Key"
+5. **Important**: Copy the key immediately - it won't be shown again!
+6. Use the key in the `X-API-Key` header when making requests
+
+Key management features:
+- **Enable/Disable**: Temporarily disable keys without deleting them
+- **Delete**: Permanently remove a key
+- **Usage Tracking**: See when each key was last used
 
 ### Using Your API
 
@@ -107,7 +127,7 @@ PUT    /api/[your-api-name]?id=X  - Update a record
 DELETE /api/[your-api-name]?id=X  - Delete a record
 ```
 
-#### Example API Usage
+#### Example API Usage (Public API)
 
 ```bash
 # Create a product
@@ -135,6 +155,45 @@ curl -X PUT http://localhost:3000/api/my-products?id=abc123 \
 curl -X DELETE http://localhost:3000/api/my-products?id=abc123
 ```
 
+#### Example API Usage (Protected API)
+
+For APIs with authentication enabled, include the `X-API-Key` header:
+
+```bash
+# Create a product (authenticated)
+curl -X POST http://localhost:3000/api/my-products \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ak_your_api_key_here" \
+  -d '{
+    "name": "Laptop",
+    "price": 999.99,
+    "in-stock": true
+  }'
+
+# Get all products (authenticated)
+curl http://localhost:3000/api/my-products \
+  -H "X-API-Key: ak_your_api_key_here"
+
+# Update a product (authenticated)
+curl -X PUT http://localhost:3000/api/my-products?id=abc123 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ak_your_api_key_here" \
+  -d '{
+    "name": "Gaming Laptop",
+    "price": 1299.99,
+    "in-stock": true
+  }'
+
+# Delete a product (authenticated)
+curl -X DELETE http://localhost:3000/api/my-products?id=abc123 \
+  -H "X-API-Key: ak_your_api_key_here"
+```
+
+**Authentication Errors:**
+- `401 Unauthorized` - Missing, invalid, or disabled API key
+- `403 Forbidden` - API key not valid for this endpoint
+```
+
 ## 📁 Project Structure
 
 ```
@@ -142,7 +201,8 @@ Claudecode1/
 ├── app/
 │   ├── admin/
 │   │   ├── _components/
-│   │   │   ├── GeminiApiKeyForm.tsx    # API key configuration
+│   │   │   ├── ApiKeyManager.tsx        # API key management UI
+│   │   │   ├── GeminiApiKeyForm.tsx    # Gemini API key config
 │   │   │   ├── GeminiSchemaGenerator.tsx # AI schema generation
 │   │   │   ├── ModelCreator.tsx         # API creation form
 │   │   │   └── ModelList.tsx            # List of created APIs
@@ -153,6 +213,7 @@ Claudecode1/
 │   │       └── route.ts                 # Dynamic API routes
 │   └── page.tsx                         # Landing page
 ├── lib/
+│   ├── apiKey.ts                        # API key utilities
 │   ├── gemini.ts                        # Gemini AI service
 │   └── prisma.ts                        # Prisma client
 ├── prisma/
@@ -183,8 +244,26 @@ model ApiModel {
   schema        String   // JSON string
   generatedByAI Boolean  @default(false)
   aiPrompt      String?
+  requiresAuth  Boolean  @default(false)
+  apiKeys       ApiKey[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+```
+
+### ApiKey
+Stores API keys for authenticated endpoints
+```prisma
+model ApiKey {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  name        String
+  modelId     String
+  model       ApiModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 ```
 
@@ -309,12 +388,14 @@ This project is open source and available under the [MIT License](LICENSE).
 ## 🔮 Future Enhancements
 
 - [ ] Persistent data storage for created APIs
-- [ ] API authentication and rate limiting
+- [x] API key authentication (✅ Implemented!)
+- [ ] Rate limiting and usage quotas
 - [ ] Export API documentation (Swagger/OpenAPI)
 - [ ] Team collaboration features
 - [ ] API versioning
 - [ ] Webhooks support
 - [ ] Custom validation rules
+- [ ] API analytics and monitoring
 
 ## 📧 Support
 

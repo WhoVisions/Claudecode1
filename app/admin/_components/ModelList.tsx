@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { deleteModel } from '../actions'
+import { ApiKeyManager } from './ApiKeyManager'
 
 interface ApiModel {
   id: string
@@ -9,6 +10,7 @@ interface ApiModel {
   schema: string
   generatedByAI: boolean
   aiPrompt: string | null
+  requiresAuth: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -85,6 +87,14 @@ export function ModelList({ models: initialModels }: ModelListProps) {
                         AI Generated
                       </span>
                     )}
+                    {model.requiresAuth && (
+                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Protected
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-500">
                     Created {new Date(model.createdAt).toLocaleDateString()}
@@ -139,6 +149,11 @@ export function ModelList({ models: initialModels }: ModelListProps) {
                       <code className="bg-blue-100 px-2 py-0.5 rounded">/api/{model.name}</code>
                     </div>
                   </div>
+
+                  {/* API Key Management */}
+                  {model.requiresAuth && (
+                    <ApiKeyManager modelId={model.id} modelName={model.name} />
+                  )}
                 </div>
               )}
             </div>

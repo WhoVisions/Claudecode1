@@ -13,6 +13,7 @@ export function ModelCreator() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [aiPrompt, setAiPrompt] = useState('')
+  const [requiresAuth, setRequiresAuth] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +34,8 @@ export function ModelCreator() {
         name,
         schema,
         mode === 'ai',
-        mode === 'ai' ? aiPrompt : undefined
+        mode === 'ai' ? aiPrompt : undefined,
+        requiresAuth
       )
 
       if (result.success) {
@@ -182,6 +184,33 @@ export function ModelCreator() {
             />
           </div>
         )}
+
+        {/* Authentication Option */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="requiresAuth"
+              checked={requiresAuth}
+              onChange={(e) => setRequiresAuth(e.target.checked)}
+              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              disabled={isPending}
+            />
+            <div className="flex-1">
+              <label htmlFor="requiresAuth" className="block text-sm font-medium text-gray-900 cursor-pointer">
+                Require API Key Authentication
+              </label>
+              <p className="text-sm text-gray-600 mt-1">
+                When enabled, all requests to this API will require a valid API key in the <code className="bg-blue-100 px-1 py-0.5 rounded">X-API-Key</code> header. You can generate API keys after creating the API.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         {/* Message */}
         {message && (

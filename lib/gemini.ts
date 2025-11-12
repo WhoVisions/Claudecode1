@@ -1,18 +1,62 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleAuth } from 'google-auth-library';
 
 /**
  * Gemini API Service
  * Handles all interactions with Google's Gemini API
+ * Supports both API key and Service Account authentication
  */
+
+export interface GeminiServiceOptions {
+  apiKey?: string;
+  serviceAccountCredentials?: any;
+}
 
 export class GeminiService {
   private client: GoogleGenerativeAI | null = null;
-  private apiKey: string;
+  private apiKey?: string;
+  private serviceAccountCredentials?: any;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-    if (apiKey) {
-      this.client = new GoogleGenerativeAI(apiKey);
+  constructor(options: GeminiServiceOptions | string) {
+    // Support both old (string) and new (options object) constructors
+    if (typeof options === 'string') {
+      this.apiKey = options;
+      if (options) {
+        this.client = new GoogleGenerativeAI(options);
+      }
+    } else {
+      this.apiKey = options.apiKey;
+      this.serviceAccountCredentials = options.serviceAccountCredentials;
+
+      if (options.apiKey) {
+        this.client = new GoogleGenerativeAI(options.apiKey);
+      } else if (options.serviceAccountCredentials) {
+        // Initialize with service account
+        this.initializeWithServiceAccount();
+      }
+    }
+  }
+
+  /**
+   * Initialize Gemini client using Service Account credentials
+   */
+  private async initializeWithServiceAccount() {
+    try {
+      const auth = new GoogleAuth({
+        credentials: this.serviceAccountCredentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      });
+
+      // Get an access token from the service account
+      const client = await auth.getClient();
+      const token = await client.getAccessToken();
+
+      if (token.token) {
+        // Use the access token as API key for Gemini
+        this.client = new GoogleGenerativeAI(token.token);
+      }
+    } catch (error) {
+      console.error('Failed to initialize with service account:', error);
     }
   }
 
@@ -219,6 +263,6 @@ Return only the modified JSON schema.`;
 /**
  * Create a Gemini service instance
  */
-export function createGeminiService(apiKey: string): GeminiService {
-  return new GeminiService(apiKey);
+export function createGeminiService(options: GeminiServiceOptions | string): GeminiService {
+  return new GeminiService(options);
 }
