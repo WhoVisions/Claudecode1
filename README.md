@@ -460,3 +460,16 @@ For issues and questions, please open an issue on GitHub.
 ---
 
 Built with ❤️ using Next.js 16, React 19, Tailwind CSS v4, and Google Gemini AI
+
+<!-- nougen:fleet-role:begin (generated from NouGenRelay fleet/manifest.json; edit the manifest, not this block) -->
+## Fleet role
+
+| | |
+|---|---|
+| Role | Claudecode1 (TypeScript) |
+| Kind | genesis_domain |
+| Status | canonical |
+| Canonical for | claudecode1 |
+| Visibility | public |
+
+<!-- nougen:fleet-role:end -->
