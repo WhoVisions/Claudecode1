@@ -49,3 +49,6 @@ prisma/dev.db-journal
 
 # sandbox temporary files
 .sandbox
+.env
+.env.*
+!.env.example
